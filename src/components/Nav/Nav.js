@@ -17,7 +17,7 @@ const Nav = () => {
                 B2 Cloud Storage
               </a>
               <a href="backup/business/business-backup.html" class="navbar_link-lg w-nav-link">
-                Business Backup
+                Business Backup
               </a>
               <a href="#" class="navbar_link-lg w-nav-link">
                 Personal Backup

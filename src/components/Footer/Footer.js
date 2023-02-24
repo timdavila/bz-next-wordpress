@@ -20,7 +20,7 @@ const Footer = () => {
             Contact
           </a>
           <a href="#" class="footer_link">
-            Terms &amp; Privacy
+            Terms &amp; Privacy
           </a>
           <div class="footer_text">
             <strong>© 2022</strong>

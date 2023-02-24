@@ -401,7 +401,7 @@ export default function Home() {
                 />
                 <div>
                   <div class="rt-headingxs-bodym w-richtext">
-                    <h3>Access &amp; Restore</h3>
+                    <h3>Access &amp; Restore</h3>
                     <p>
                       Use your data worldwide with iOS and Android apps, and a web restore to download what you need.
                     </p>
