@@ -1,235 +1,91 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import Link from 'next/link';
-import { FaSearch } from 'react-icons/fa';
-
-import useSite from 'hooks/use-site';
-import useSearch, { SEARCH_STATE_LOADED } from 'hooks/use-search';
-import { postPathBySlug } from 'lib/posts';
-import { findMenuByLocation, MENU_LOCATION_NAVIGATION_DEFAULT } from 'lib/menus';
-
-import Section from 'components/Section';
-
-import styles from './Nav.module.scss';
-import NavListItem from 'components/NavListItem';
-
-const SEARCH_VISIBLE = 'visible';
-const SEARCH_HIDDEN = 'hidden';
-
 const Nav = () => {
-  const formRef = useRef();
-
-  const [searchVisibility, setSearchVisibility] = useState(SEARCH_HIDDEN);
-
-  const { metadata = {}, menus } = useSite();
-  const { title } = metadata;
-
-  const navigationLocation = process.env.WORDPRESS_MENU_LOCATION_NAVIGATION || MENU_LOCATION_NAVIGATION_DEFAULT;
-  const navigation = findMenuByLocation(menus, navigationLocation);
-
-  const { query, results, search, clearSearch, state } = useSearch({
-    maxResults: 5,
-  });
-
-  const searchIsLoaded = state === SEARCH_STATE_LOADED;
-
-  // When the search visibility changes, we want to add an event listener that allows us to
-  // detect when someone clicks outside of the search box, allowing us to close the results
-  // when focus is drawn away from search
-
-  useEffect(() => {
-    // If we don't have a query, don't need to bother adding an event listener
-    // but run the cleanup in case the previous state instance exists
-
-    if (searchVisibility === SEARCH_HIDDEN) {
-      removeDocumentOnClick();
-      return;
-    }
-
-    addDocumentOnClick();
-    addResultsRoving();
-
-    // When the search box opens up, additionall find the search input and focus
-    // on the element so someone can start typing right away
-
-    const searchInput = Array.from(formRef.current.elements).find((input) => input.type === 'search');
-
-    searchInput.focus();
-
-    return () => {
-      removeResultsRoving();
-      removeDocumentOnClick();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchVisibility]);
-
-  /**
-   * addDocumentOnClick
-   */
-
-  function addDocumentOnClick() {
-    document.body.addEventListener('click', handleOnDocumentClick, true);
-  }
-
-  /**
-   * removeDocumentOnClick
-   */
-
-  function removeDocumentOnClick() {
-    document.body.removeEventListener('click', handleOnDocumentClick, true);
-  }
-
-  /**
-   * handleOnDocumentClick
-   */
-
-  function handleOnDocumentClick(e) {
-    if (!e.composedPath().includes(formRef.current)) {
-      setSearchVisibility(SEARCH_HIDDEN);
-      clearSearch();
-    }
-  }
-
-  /**
-   * handleOnSearch
-   */
-
-  function handleOnSearch({ currentTarget }) {
-    search({
-      query: currentTarget.value,
-    });
-  }
-
-  /**
-   * handleOnToggleSearch
-   */
-
-  function handleOnToggleSearch() {
-    setSearchVisibility(SEARCH_VISIBLE);
-  }
-
-  /**
-   * addResultsRoving
-   */
-
-  function addResultsRoving() {
-    document.body.addEventListener('keydown', handleResultsRoving);
-  }
-
-  /**
-   * removeResultsRoving
-   */
-
-  function removeResultsRoving() {
-    document.body.removeEventListener('keydown', handleResultsRoving);
-  }
-
-  /**
-   * handleResultsRoving
-   */
-
-  function handleResultsRoving(e) {
-    const focusElement = document.activeElement;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (focusElement.nodeName === 'INPUT' && focusElement.nextSibling.children[0].nodeName !== 'P') {
-        focusElement.nextSibling.children[0].firstChild.firstChild.focus();
-      } else if (focusElement.parentElement.nextSibling) {
-        focusElement.parentElement.nextSibling.firstChild.focus();
-      } else {
-        focusElement.parentElement.parentElement.firstChild.firstChild.focus();
-      }
-    }
-
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (focusElement.nodeName === 'A' && focusElement.parentElement.previousSibling) {
-        focusElement.parentElement.previousSibling.firstChild.focus();
-      } else {
-        focusElement.parentElement.parentElement.lastChild.firstChild.focus();
-      }
-    }
-  }
-
-  /**
-   * escFunction
-   */
-
-  // pressing esc while search is focused will close it
-
-  const escFunction = useCallback((event) => {
-    if (event.keyCode === 27) {
-      clearSearch();
-      setSearchVisibility(SEARCH_HIDDEN);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener('keydown', escFunction, false);
-
-    return () => {
-      document.removeEventListener('keydown', escFunction, false);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
-    <nav className={styles.nav}>
-      <Section className={styles.navSection}>
-        <p className={styles.navName}>
-          <Link href="/">
-            <a>{title}</a>
-          </Link>
-        </p>
-        <ul className={styles.navMenu}>
-          {navigation?.map((listItem) => {
-            return <NavListItem key={listItem.id} className={styles.navSubMenu} item={listItem} />;
-          })}
-        </ul>
-        <div className={styles.navSearch}>
-          {searchVisibility === SEARCH_HIDDEN && (
-            <button onClick={handleOnToggleSearch} disabled={!searchIsLoaded}>
-              <span className="sr-only">Toggle Search</span>
-              <FaSearch />
-            </button>
-          )}
-          {searchVisibility === SEARCH_VISIBLE && (
-            <form ref={formRef} action="/search" data-search-is-active={!!query}>
-              <input
-                type="search"
-                name="q"
-                value={query || ''}
-                onChange={handleOnSearch}
-                autoComplete="off"
-                placeholder="Search..."
-                required
-              />
-              <div className={styles.navSearchResults}>
-                {results.length > 0 && (
-                  <ul>
-                    {results.map(({ slug, title }, index) => {
-                      return (
-                        <li key={slug}>
-                          <Link tabIndex={index} href={postPathBySlug(slug)}>
-                            <a>{title}</a>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                {results.length === 0 && (
-                  <p>
-                    Sorry, not finding anything for <strong>{query}</strong>
-                  </p>
-                )}
+    <>
+      <div class="navbar wf-section">
+        <div class="navbar_container w-container">
+          <a href="index.html" aria-current="page" class="navbar_logo w-nav-brand w--current">
+            <img
+              src="images/logo-backblaze-flame-header.4851ea2289eaf4242079c6dcd0acb1be.png"
+              loading="eager"
+              alt=""
+              class="navbar_logo_image"
+            />
+          </a>
+          <nav role="navigation" class="nav-menu w-nav-menu">
+            <div class="navbar_links-left">
+              <a href="b2/cloud-storage.html" class="navbar_link-lg w-nav-link">
+                B2 Cloud Storage
+              </a>
+              <a href="backup/business/business-backup.html" class="navbar_link-lg w-nav-link">
+                Business Backup
+              </a>
+              <a href="#" class="navbar_link-lg w-nav-link">
+                Personal Backup
+              </a>
+            </div>
+            <div class="navbar_links-right">
+              <a href="#" class="navbar_link-sm navbar_link-sm-blue w-nav-link">
+                Partners
+              </a>
+              <a href="#" class="navbar_link-sm navbar_link-sm-blue w-nav-link">
+                Blog
+              </a>
+              <a href="#" class="navbar_link-sm navbar_link-sm-blue w-nav-link">
+                Help
+              </a>
+              <a href="#" class="navbar_link-sm navbar_link-sm-red w-nav-link">
+                Sign In
+              </a>
+            </div>
+          </nav>
+          <div class="navbar_menubtn w-nav-button">
+            <div class="div-block-47">
+              <div class="w-embed"></div>
+              <div class="navbar_menubtn_icon">
+                <div class="navbar_menubtn_icon_line1 navbar_menubtn_icon_line"></div>
+                <div class="navbar_menubtn_icon_line3 navbar_menubtn_icon_line"></div>
+                <div class="navbar_menubtn_icon_line2 navbar_menubtn_icon_line"></div>
               </div>
-            </form>
-          )}
+              <div class="div-block-48">
+                <div class="navbar_menubtn_label-close navbar_menubtn_label">Close</div>
+                <div class="navbar_menubtn_label-menu navbar_menubtn_label">Menu</div>
+              </div>
+            </div>
+          </div>
         </div>
-      </Section>
-    </nav>
+      </div>
+      <div class="navbarspacer"></div>
+      <div id="alert-primary" class="alert-primary alert wf-section">
+        <div class="html-embed-2 w-embed w-script"></div>
+        <div class="alert_container w-container">
+          <div class="alert_text body-s-regular text-white">
+            Migrate on Us - move to Backblaze B2 with egress and transfer.
+          </div>
+          <a href="#" class="cta cta-text w-inline-block">
+            <div class="cta-label cta-label-white">Learn More</div>
+            <div class="cta-arrow-white-svg-embed cta-arrow cta-text-arrow w-embed">
+              <svg width="24" height="24" viewbox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M14.5077 19.3916C14.1172 19.7821 13.484 19.7821 13.0935 19.3916C12.703 19.0011 12.703 18.3679 13.0935 17.9774L18.0712 12.9996H3.51489C2.96261 12.9996 2.51489 12.5519 2.51489 11.9996C2.51489 11.4473 2.96261 10.9996 3.51489 10.9996H18.0709L13.0935 6.02217C12.703 5.63165 12.703 4.99848 13.0935 4.60796C13.484 4.21743 14.1172 4.21743 14.5077 4.60796L21.1772 11.2775C21.3672 11.4595 21.4855 11.7157 21.4855 11.9996C21.4855 12.1697 21.443 12.3299 21.368 12.4702C21.3287 12.5439 21.2795 12.6137 21.2204 12.6777C21.2111 12.6878 21.2015 12.6978 21.1918 12.7075M21.1918 12.7075L14.5077 19.3916Z"
+                  fill="#ffffff"
+                ></path>
+              </svg>
+            </div>
+            <div class="cta-underline cta-underline-white"></div>
+          </a>
+          <a href="#" class="alert-primary_closebtn close-btn w-inline-block">
+            <img
+              src="images/Close-Window_ColorWhite.svg"
+              loading="lazy"
+              alt="Product icon close window in white"
+              class="alert_closebtn_icon"
+            />
+          </a>
+        </div>
+      </div>
+    </>
   );
 };
 

@@ -190,7 +190,7 @@ export function constructPageMetadata(defaultMetadata = {}, pageMetadata = {}, o
  */
 
 export function helmetSettingsFromMetadata(metadata = {}, options = {}) {
-  const { link = [], meta = [], setTitle = true } = options;
+  const { link = [], meta = [], script = [], setTitle = true } = options;
 
   const sanitizedDescription = removeExtraSpaces(metadata.description);
 
@@ -204,11 +204,45 @@ export function helmetSettingsFromMetadata(metadata = {}, options = {}) {
     settings.title = metadata.title;
   }
 
+  settings.script = [
+    ...script,
+    {
+      type: 'text/javascript',
+      src: 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js',
+    },
+    {
+      type: 'text/javascript',
+      innerHTML:
+        'WebFont.load({google: {families: ["DM Sans:regular,500,700","DM Serif Text:regular","DM Serif Display:regular,italic"]}});',
+    },
+  ];
+
   settings.link = [
     ...link,
     {
       rel: 'canonical',
       href: metadata.canonical,
+    },
+    {
+      rel: 'stylesheet',
+      href: '/css/normalize.css',
+    },
+    {
+      rel: 'stylesheet',
+      href: '/css/components.css',
+    },
+    {
+      rel: 'stylesheet',
+      href: '/css/backblaze-site.css',
+    },
+    {
+      rel: 'preconnect',
+      href: 'https://fonts.googleapis.com',
+    },
+    {
+      rel: 'preconnect',
+      href: 'https://fonts.gstatic.com',
+      crossOrigin: 'anonymous',
     },
   ].filter(({ href } = {}) => !!href);
 
